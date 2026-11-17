@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,13 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -121,8 +119,6 @@ fun NoteScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    // Creating new item uses the same window/dialog.
-                    // Empty text and tags upon closing/dismissing will discard/delete the item.
                     showNewItemDialog = true
                 },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -155,7 +151,7 @@ fun NoteScreen(
                             filteredItemsCount = filteredContent.size
                         )
 
-                        // Note Items List with reordering and drag support
+                        // Note Items List with high performance item keys and O(1) index lookup cache
                         if (filteredContent.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -184,6 +180,11 @@ fun NoteScreen(
                         } else {
                             val listItems = filteredContent
                             val fullNoteItems = uiState.currentNote.content
+                            // Precompute index map for O(1) lookup during reordering
+                            val indexMap = remember(fullNoteItems) {
+                                fullNoteItems.withIndex().associate { it.value.id to it.index }
+                            }
+                            val totalSize = fullNoteItems.size
 
                             LazyColumn(
                                 modifier = Modifier
@@ -191,13 +192,13 @@ fun NoteScreen(
                                     .weight(1f),
                                 contentPadding = PaddingValues(bottom = 80.dp)
                             ) {
-                                itemsIndexed(
+                                items(
                                     items = listItems,
-                                    key = { _, item -> item.id }
-                                ) { _, item ->
-                                    val fullIndex = fullNoteItems.indexOfFirst { it.id == item.id }
+                                    key = { item -> item.id }
+                                ) { item ->
+                                    val fullIndex = indexMap[item.id] ?: 0
                                     val isFirst = fullIndex == 0
-                                    val isLast = fullIndex == fullNoteItems.size - 1
+                                    val isLast = fullIndex == totalSize - 1
 
                                     NoteItemCard(
                                         item = item,
@@ -266,7 +267,6 @@ fun NoteScreen(
                 if (text.isNotBlank() || tags.isNotEmpty()) {
                     viewModel.addItem(text, tags)
                 }
-                // If empty upon closing/dismissing, discard/delete (do nothing)
             }
         )
     }
