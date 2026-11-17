@@ -16,7 +16,7 @@ class NoteViewModelTest {
 
     @Before
     fun setUp() {
-        viewModel = NoteViewModel(NoteRepository())
+        viewModel = NoteViewModel(android.app.Application(), NoteRepository())
     }
 
     @Test

@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.talynxa"
-        minSdk = 37
+        minSdk = 31
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"

@@ -4,9 +4,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,9 +21,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -38,12 +45,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.talynxa.ui.components.AddItemDialog
+import com.example.talynxa.data.model.NoteItem
 import com.example.talynxa.ui.components.NoteDetailsDialog
+import com.example.talynxa.ui.components.NoteEditDialog
 import com.example.talynxa.ui.components.NoteItemCard
 import com.example.talynxa.ui.components.NoteTopAppBar
 import com.example.talynxa.ui.components.TagFilterSection
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteScreen(
     viewModel: NoteViewModel,
@@ -58,7 +67,8 @@ fun NoteScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var showAddItemDialog by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<NoteItem?>(null) }
+    var showNewItemDialog by remember { mutableStateOf(false) }
     var showEditDetailsDialog by remember { mutableStateOf(false) }
 
     // Handle Snackbar messages
@@ -86,7 +96,11 @@ fun NoteScreen(
                 onOpenClick = onOpenDocumentLauncher,
                 onSaveClick = {
                     if (uiState.currentUri != null) {
-                        viewModel.saveToUri(context, uiState.currentUri!!)
+                        viewModel.saveToUri(
+                            context = context,
+                            uri = uiState.currentUri!!,
+                            onPermissionFailure = onCreateDocumentLauncher
+                        )
                     } else {
                         onCreateDocumentLauncher()
                     }
@@ -106,7 +120,11 @@ fun NoteScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showAddItemDialog = true },
+                onClick = {
+                    // Creating new item uses the same window/dialog.
+                    // Empty text and tags upon closing/dismissing will discard/delete the item.
+                    showNewItemDialog = true
+                },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("Add Element") }
             )
@@ -137,7 +155,7 @@ fun NoteScreen(
                             filteredItemsCount = filteredContent.size
                         )
 
-                        // Note Items List
+                        // Note Items List with reordering and drag support
                         if (filteredContent.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -164,6 +182,9 @@ fun NoteScreen(
                                 }
                             }
                         } else {
+                            val listItems = filteredContent
+                            val fullNoteItems = uiState.currentNote.content
+
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -171,33 +192,42 @@ fun NoteScreen(
                                 contentPadding = PaddingValues(bottom = 80.dp)
                             ) {
                                 itemsIndexed(
-                                    items = filteredContent,
+                                    items = listItems,
                                     key = { _, item -> item.id }
-                                ) { index, item ->
-                                    val isFirst = index == 0
-                                    val isLast = index == filteredContent.size - 1
+                                ) { _, item ->
+                                    val fullIndex = fullNoteItems.indexOfFirst { it.id == item.id }
+                                    val isFirst = fullIndex == 0
+                                    val isLast = fullIndex == fullNoteItems.size - 1
 
                                     NoteItemCard(
                                         item = item,
-                                        isFirst = isFirst,
-                                        isLast = isLast,
-                                        onEditItem = { id, text, tags ->
-                                            viewModel.editItem(id, text, tags)
-                                        },
-                                        onAddTagToItem = { id, tag ->
-                                            viewModel.addTagToItem(id, tag)
-                                        },
-                                        onRemoveTagFromItem = { id, tag ->
-                                            viewModel.removeTagFromItem(id, tag)
-                                        },
-                                        onDeleteItem = { id ->
-                                            viewModel.deleteItem(id)
-                                        },
-                                        onMoveUp = { id ->
-                                            viewModel.moveItemUp(id)
-                                        },
-                                        onMoveDown = { id ->
-                                            viewModel.moveItemDown(id)
+                                        onClick = { editingItem = item },
+                                        onDeleteItem = { id -> viewModel.deleteItem(id) },
+                                        dragHandle = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                IconButton(
+                                                    onClick = { viewModel.moveItemUp(item.id) },
+                                                    enabled = !isFirst,
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.ArrowUpward,
+                                                        contentDescription = "Move Up",
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = { viewModel.moveItemDown(item.id) },
+                                                    enabled = !isLast,
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.ArrowDownward,
+                                                        contentDescription = "Move Down",
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     )
                                 }
@@ -209,12 +239,34 @@ fun NoteScreen(
         }
     }
 
-    // Dialogs
-    if (showAddItemDialog) {
-        AddItemDialog(
-            onDismiss = { showAddItemDialog = false },
-            onAddItem = { text, tags ->
-                viewModel.addItem(text, tags)
+    // Edit Item Dialog
+    editingItem?.let { item ->
+        NoteEditDialog(
+            item = item,
+            onDismiss = { editingItem = null },
+            onSaveItem = { text, tags ->
+                if (text.isBlank() && tags.isEmpty()) {
+                    viewModel.deleteItem(item.id)
+                } else {
+                    viewModel.editItem(item.id, text, tags)
+                }
+            },
+            onDeleteItem = {
+                viewModel.deleteItem(item.id)
+            }
+        )
+    }
+
+    // New Item Dialog
+    if (showNewItemDialog) {
+        NoteEditDialog(
+            item = null,
+            onDismiss = { showNewItemDialog = false },
+            onSaveItem = { text, tags ->
+                if (text.isNotBlank() || tags.isNotEmpty()) {
+                    viewModel.addItem(text, tags)
+                }
+                // If empty upon closing/dismissing, discard/delete (do nothing)
             }
         )
     }

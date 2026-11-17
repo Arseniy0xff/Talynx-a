@@ -6,6 +6,7 @@ import android.net.Uri
 import com.example.talynxa.data.model.NoteFile
 import com.example.talynxa.data.model.NoteItem
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -63,8 +64,32 @@ class NoteRepository(
         }
     }
 
+    fun readNoteFromFile(file: File): Result<NoteFile> {
+        return runCatching {
+            val jsonText = file.readText(Charsets.UTF_8)
+            json.decodeFromString(NoteFile.serializer(), jsonText)
+        }
+    }
+
+    fun writeNoteToFile(file: File, noteFile: NoteFile): Result<Unit> {
+        return runCatching {
+            val jsonText = encodeJsonString(noteFile)
+            file.writeText(jsonText, Charsets.UTF_8)
+        }
+    }
+
     fun readNoteFromUri(context: Context, uri: Uri): Result<NoteFile> {
         return runCatching {
+            // Check if URI is a file scheme or file path
+            if (uri.scheme == "file") {
+                val path = uri.path
+                if (path != null) {
+                    val file = File(path)
+                    if (file.exists()) {
+                        return readNoteFromFile(file)
+                    }
+                }
+            }
             val inputStream = context.contentResolver.openInputStream(uri)
                 ?: throw IllegalArgumentException("Cannot open input stream for URI: $uri")
             readNoteFromInputStream(inputStream).getOrThrow()
@@ -73,6 +98,14 @@ class NoteRepository(
 
     fun writeNoteToUri(context: Context, uri: Uri, noteFile: NoteFile): Result<Unit> {
         return runCatching {
+            // Check if URI is a file scheme or file path
+            if (uri.scheme == "file") {
+                val path = uri.path
+                if (path != null) {
+                    val file = File(path)
+                    return writeNoteToFile(file, noteFile)
+                }
+            }
             val outputStream = context.contentResolver.openOutputStream(uri, "wt")
                 ?: context.contentResolver.openOutputStream(uri)
                 ?: throw IllegalArgumentException("Cannot open output stream for URI: $uri")
@@ -87,6 +120,20 @@ class NoteRepository(
             Intent.ACTION_VIEW -> {
                 val uri = intent.data
                 if (uri != null) {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                    } catch (_: Exception) {
+                        try {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        } catch (_: Exception) {
+                        }
+                    }
                     readNoteFromUri(context, uri).getOrNull()?.let { return it }
                 }
             }
@@ -94,6 +141,20 @@ class NoteRepository(
                 val uri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) ?: intent.data
 
                 if (uri != null) {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                    } catch (_: Exception) {
+                        try {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        } catch (_: Exception) {
+                        }
+                    }
                     readNoteFromUri(context, uri).getOrNull()?.let { return it }
                 } else {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)

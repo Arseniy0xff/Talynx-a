@@ -1,10 +1,12 @@
 package com.example.talynxa.ui
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.talynxa.data.PreferencesRepository
 import com.example.talynxa.data.model.MatchMode
 import com.example.talynxa.data.model.NoteFile
 import com.example.talynxa.data.model.NoteItem
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class NoteUiState(
     val currentNote: NoteFile = NoteFile(),
@@ -30,12 +33,33 @@ data class NoteUiState(
     val infoMessage: String? = null
 )
 
-class NoteViewModel(
+class NoteViewModel @JvmOverloads constructor(
+    application: Application = Application(),
     private val repository: NoteRepository = NoteRepository()
-) : ViewModel() {
+) : AndroidViewModel(application) {
+
+    private val preferencesRepository by lazy { PreferencesRepository(application) }
 
     private val _uiState = MutableStateFlow(NoteUiState(currentNote = repository.getDefaultNote()))
     val uiState: StateFlow<NoteUiState> = _uiState.asStateFlow()
+
+    init {
+        // Load persisted preferences on startup
+        viewModelScope.launch {
+            try {
+                preferencesRepository.oledThemeFlow.collect { oled ->
+                    _uiState.value = _uiState.value.copy(isOledTheme = oled)
+                }
+            } catch (_: Exception) { }
+        }
+        viewModelScope.launch {
+            try {
+                preferencesRepository.darkThemeOverrideFlow.collect { override ->
+                    _uiState.value = _uiState.value.copy(isDarkThemeOverride = override)
+                }
+            } catch (_: Exception) { }
+        }
+    }
 
     val tagCounts: StateFlow<Map<String, Int>> = _uiState
         .map { state -> calculateTagCounts(state.currentNote.content) }
@@ -115,8 +139,14 @@ class NoteViewModel(
             }
     }
 
-    fun saveToUri(context: Context, uri: Uri) {
+    fun saveToUri(context: Context, uri: Uri, onPermissionFailure: () -> Unit = {}) {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        // Ensure persistable permission if possible
+        try {
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (_: Exception) { }
+
         repository.writeNoteToUri(context, uri, _uiState.value.currentNote)
             .onSuccess {
                 _uiState.value = _uiState.value.copy(
@@ -129,8 +159,9 @@ class NoteViewModel(
             .onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = "Failed to save file: ${error.localizedMessage}"
+                    errorMessage = "Failed to save file: ${error.localizedMessage}. Please use Save As."
                 )
+                onPermissionFailure()
             }
     }
 
@@ -161,11 +192,18 @@ class NoteViewModel(
     }
 
     fun toggleOledTheme() {
-        _uiState.value = _uiState.value.copy(isOledTheme = !_uiState.value.isOledTheme)
+        val newOled = !_uiState.value.isOledTheme
+        _uiState.value = _uiState.value.copy(isOledTheme = newOled)
+        viewModelScope.launch {
+            preferencesRepository.setOledTheme(newOled)
+        }
     }
 
     fun setDarkThemeOverride(override: Boolean?) {
         _uiState.value = _uiState.value.copy(isDarkThemeOverride = override)
+        viewModelScope.launch {
+            preferencesRepository.setDarkThemeOverride(override)
+        }
     }
 
     fun updateNoteDetails(name: String, fileName: String) {
