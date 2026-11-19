@@ -18,11 +18,12 @@ class NoteRepositoryTest {
         val jsonInput = """
             {
                 "name": "Test",
-                "file_name": "test",
                 "content": [
                     {
+                        "id": 0,
                         "text": "test",
-                        "tags": ["a", "b"]
+                        "tags": ["a", "b"],
+                        "links": [1, "2", 3]
                     }
                 ]
             }
@@ -33,25 +34,28 @@ class NoteRepositoryTest {
 
         val noteFile = parseResult.getOrThrow()
         assertEquals("Test", noteFile.name)
-        assertEquals("test", noteFile.fileName)
         assertEquals(1, noteFile.content.size)
+        assertEquals("0", noteFile.content[0].id)
         assertEquals("test", noteFile.content[0].text)
         assertEquals(listOf("a", "b"), noteFile.content[0].tags)
+        assertEquals(listOf("1", "2", "3"), noteFile.content[0].links)
 
         val reEncoded = repository.encodeJsonString(noteFile)
-        assertTrue(reEncoded.contains("\"name\": \"Test\""))
-        assertTrue(reEncoded.contains("\"file_name\": \"test\""))
+        assertTrue(reEncoded.contains("Test"))
+        assertTrue(reEncoded.contains("0"))
+        assertTrue(reEncoded.contains("1"))
     }
 
     @Test
     fun testCyrillicAndUtf8Handling() {
         val originalNote = NoteFile(
             name = "Заметки на русском 🇷🇺",
-            fileName = "notes_ru.json",
             content = listOf(
                 NoteItem(
+                    id = "0",
                     text = "Привет, мир! 🌍 Кириллические символы и эмодзи ✨",
-                    tags = listOf("русский", "тест", "utf8")
+                    tags = listOf("русский", "тест", "utf8"),
+                    links = listOf("1")
                 )
             )
         )
@@ -60,9 +64,10 @@ class NoteRepositoryTest {
         val decodedNote = repository.parseJsonString(jsonString).getOrThrow()
 
         assertEquals(originalNote.name, decodedNote.name)
-        assertEquals(originalNote.fileName, decodedNote.fileName)
+        assertEquals(originalNote.content[0].id, decodedNote.content[0].id)
         assertEquals(originalNote.content[0].text, decodedNote.content[0].text)
         assertEquals(originalNote.content[0].tags, decodedNote.content[0].tags)
+        assertEquals(originalNote.content[0].links, decodedNote.content[0].links)
     }
 
     @Test

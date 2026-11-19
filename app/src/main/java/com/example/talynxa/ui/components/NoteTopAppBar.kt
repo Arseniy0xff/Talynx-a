@@ -47,7 +47,6 @@ import com.example.talynxa.ui.theme.TalynxaTheme
 @Composable
 fun NoteTopAppBar(
     noteTitle: String,
-    fileName: String,
     hasUriAttached: Boolean,
     modifier: Modifier = Modifier,
     isModified: Boolean = false,
@@ -98,13 +97,6 @@ fun NoteTopAppBar(
                         }
                     }
                 }
-                Text(
-                    text = if (fileName.isBlank()) "no_file.json" else fileName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         },
         actions = {
@@ -134,7 +126,7 @@ fun NoteTopAppBar(
                 onDismissRequest = { menuExpanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Edit Title & File Name") },
+                    text = { Text("Edit Note Title") },
                     onClick = {
                         menuExpanded = false
                         onEditDetailsClick()
@@ -215,7 +207,6 @@ private fun NoteTopAppBarPreview() {
     TalynxaTheme {
         NoteTopAppBar(
             noteTitle = "My Shopping Note",
-            fileName = "shopping.json",
             hasUriAttached = true,
             isModified = true,
             isOledTheme = false,
@@ -223,4 +214,3 @@ private fun NoteTopAppBarPreview() {
         )
     }
 }
-

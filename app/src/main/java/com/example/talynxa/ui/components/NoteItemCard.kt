@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -64,14 +65,30 @@ fun NoteItemCard(
                 verticalAlignment = Alignment.Top
             ) {
                 // Item Text with height / line limit (max 3-4 lines with ellipsis)
-                Text(
-                    text = item.text.ifBlank { "(Empty item)" },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (item.text.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Text(
+                                text = "ID: ${item.id}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = item.text.ifBlank { "(Empty item)" },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (item.text.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -97,14 +114,44 @@ fun NoteItemCard(
                 }
             }
 
-            // Tags displayed in smaller, fainter text, each placed inside its own small visual box with rounded edges (outlined tag chips / pill containers)
-            if (item.tags.isNotEmpty()) {
+            // Links and Tags displayed inside visual chips
+            if (item.links.isNotEmpty() || item.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    item.links.forEach { linkId ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier.padding(1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Link,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "-> $linkId",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
+                    }
+
                     item.tags.forEach { tag ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -147,8 +194,9 @@ private fun NoteItemCardPreview() {
         NoteItemCard(
             item = NoteItem(
                 id = "1",
-                text = "Sample note item content with a relatively long text that should be clamped to a maximum of 3 or 4 lines with ellipsis when displayed on the main card view.",
-                tags = listOf("work", "urgent", "ideas")
+                text = "Sample note item content with links and tags.",
+                tags = listOf("work", "urgent"),
+                links = listOf("0")
             ),
             onClick = {},
             onDeleteItem = {}

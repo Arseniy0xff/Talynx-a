@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +35,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -51,12 +53,14 @@ import com.example.talynxa.data.model.NoteItem
 fun NoteEditDialog(
     item: NoteItem?, // null if creating a new item
     onDismiss: () -> Unit,
-    onSaveItem: (text: String, tags: List<String>) -> Unit,
+    onSaveItem: (text: String, tags: List<String>, links: List<String>) -> Unit,
     onDeleteItem: (() -> Unit)? = null
 ) {
     var textInput by remember(item) { mutableStateOf(item?.text ?: "") }
     var tagsList by remember(item) { mutableStateOf(item?.tags ?: emptyList()) }
+    var linksList by remember(item) { mutableStateOf(item?.links ?: emptyList()) }
     var newTagInput by remember { mutableStateOf("") }
+    var newLinkInput by remember { mutableStateOf("") }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -71,7 +75,7 @@ fun NoteEditDialog(
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                text = if (item == null) "New Element" else "Edit Element",
+                                text = if (item == null) "New Element" else "Edit Element (${item.id})",
                                 style = MaterialTheme.typography.titleLarge
                             )
                         },
@@ -98,7 +102,7 @@ fun NoteEditDialog(
                             }
                             IconButton(
                                 onClick = {
-                                    onSaveItem(textInput, tagsList)
+                                    onSaveItem(textInput, tagsList, linksList)
                                     onDismiss()
                                 }
                             ) {
@@ -114,7 +118,7 @@ fun NoteEditDialog(
                 floatingActionButton = {
                     FloatingActionButton(
                         onClick = {
-                            onSaveItem(textInput, tagsList)
+                            onSaveItem(textInput, tagsList, linksList)
                             onDismiss()
                         }
                     ) {
@@ -147,9 +151,99 @@ fun NoteEditDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f, fill = false),
-                        minLines = 10,
-                        maxLines = 25
+                        minLines = 8,
+                        maxLines = 20
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Links (Target Item IDs)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (linksList.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            linksList.forEach { linkId ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    modifier = Modifier.padding(2.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Link,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "ID: $linkId",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        IconButton(
+                                            onClick = {
+                                                linksList = linksList.filter { it != linkId }
+                                            },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Remove link",
+                                                modifier = Modifier.size(14.dp),
+                                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Add link row
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = newLinkInput,
+                            onValueChange = { newLinkInput = it },
+                            label = { Text("Add Link (Item ID int)") },
+                            placeholder = { Text("e.g. 0, 1, 2") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Button(
+                            onClick = {
+                                val linkStr = newLinkInput.trim()
+                                if (linkStr.isNotEmpty() && !linksList.contains(linkStr)) {
+                                    linksList = linksList + linkStr
+                                    newLinkInput = ""
+                                }
+                            },
+                            enabled = newLinkInput.isNotBlank()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Link")
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 

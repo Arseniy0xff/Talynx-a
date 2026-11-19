@@ -206,10 +206,9 @@ class NoteViewModel @JvmOverloads constructor(
         }
     }
 
-    fun updateNoteDetails(name: String, fileName: String) {
+    fun updateNoteDetails(name: String) {
         val updatedNote = _uiState.value.currentNote.copy(
-            name = name,
-            fileName = fileName
+            name = name
         )
         _uiState.value = _uiState.value.copy(
             currentNote = updatedNote,
@@ -219,9 +218,11 @@ class NoteViewModel @JvmOverloads constructor(
 
     // CRUD Operations for NoteItem
 
-    fun addItem(text: String, tags: List<String> = emptyList()) {
+    fun addItem(text: String, tags: List<String> = emptyList(), links: List<String> = emptyList()) {
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        val newItem = NoteItem(text = text, tags = cleanTags)
+        val cleanLinks = links.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val nextId = (_uiState.value.currentNote.content.mapNotNull { it.id.toIntOrNull() }.maxOrNull() ?: -1) + 1
+        val newItem = NoteItem(id = nextId.toString(), text = text, tags = cleanTags, links = cleanLinks)
         val updatedContent = _uiState.value.currentNote.content + newItem
         val updatedNote = _uiState.value.currentNote.copy(content = updatedContent)
         _uiState.value = _uiState.value.copy(
@@ -230,11 +231,12 @@ class NoteViewModel @JvmOverloads constructor(
         )
     }
 
-    fun editItem(id: String, text: String, tags: List<String>) {
+    fun editItem(id: String, text: String, tags: List<String>, links: List<String>) {
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val cleanLinks = links.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         val updatedContent = _uiState.value.currentNote.content.map { item ->
             if (item.id == id) {
-                item.copy(text = text, tags = cleanTags)
+                item.copy(text = text, tags = cleanTags, links = cleanLinks)
             } else {
                 item
             }

@@ -86,7 +86,6 @@ fun NoteScreen(
         topBar = {
             NoteTopAppBar(
                 noteTitle = uiState.currentNote.name,
-                fileName = uiState.currentNote.fileName,
                 hasUriAttached = uiState.currentUri != null,
                 isModified = uiState.isModified,
                 isOledTheme = uiState.isOledTheme,
@@ -245,11 +244,11 @@ fun NoteScreen(
         NoteEditDialog(
             item = item,
             onDismiss = { editingItem = null },
-            onSaveItem = { text, tags ->
+            onSaveItem = { text, tags, links ->
                 if (text.isBlank() && tags.isEmpty()) {
                     viewModel.deleteItem(item.id)
                 } else {
-                    viewModel.editItem(item.id, text, tags)
+                    viewModel.editItem(item.id, text, tags, links)
                 }
             },
             onDeleteItem = {
@@ -263,9 +262,9 @@ fun NoteScreen(
         NoteEditDialog(
             item = null,
             onDismiss = { showNewItemDialog = false },
-            onSaveItem = { text, tags ->
+            onSaveItem = { text, tags, links ->
                 if (text.isNotBlank() || tags.isNotEmpty()) {
-                    viewModel.addItem(text, tags)
+                    viewModel.addItem(text, tags, links)
                 }
             }
         )
@@ -274,10 +273,9 @@ fun NoteScreen(
     if (showEditDetailsDialog) {
         NoteDetailsDialog(
             initialTitle = uiState.currentNote.name,
-            initialFileName = uiState.currentNote.fileName,
             onDismiss = { showEditDetailsDialog = false },
-            onSaveDetails = { name, fileName ->
-                viewModel.updateNoteDetails(name, fileName)
+            onSaveDetails = { name ->
+                viewModel.updateNoteDetails(name)
             }
         )
     }

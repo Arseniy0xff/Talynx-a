@@ -21,20 +21,19 @@ class NoteRepository(
 
     fun getDefaultNote(): NoteFile {
         return NoteFile(
-            name = "Заметки / Notes",
-            fileName = "sample.json",
+            name = "Test",
             content = listOf(
                 NoteItem(
-                    text = "Привет! Это примечание с поддержкой UTF-8 и кириллицы ✨",
-                    tags = listOf("приветствие", "тест", "utf8")
+                    id = "0",
+                    text = "test",
+                    tags = listOf("a", "b"),
+                    links = listOf("1")
                 ),
                 NoteItem(
-                    text = "Organize your tasks and thoughts with tags.",
-                    tags = listOf("info", "tags")
-                ),
-                NoteItem(
-                    text = "Select multiple tags to filter items by match mode (ALL vs ANY).",
-                    tags = listOf("info", "filter", "tips")
+                    id = "1",
+                    text = "test2",
+                    tags = listOf("a"),
+                    links = emptyList()
                 )
             )
         )
@@ -163,8 +162,7 @@ class NoteRepository(
                         // If plain text shared, wrap as a note item
                         return NoteFile(
                             name = "Shared Note",
-                            fileName = "shared.json",
-                            content = listOf(NoteItem(text = text, tags = listOf("shared")))
+                            content = listOf(NoteItem(id = "0", text = text, tags = listOf("shared"), links = emptyList()))
                         )
                     }
                 }

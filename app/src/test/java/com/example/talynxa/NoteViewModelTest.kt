@@ -21,12 +21,13 @@ class NoteViewModelTest {
 
     @Test
     fun testAddItemAndTagStatistics() {
-        viewModel.addItem("First item", listOf("work", "urgent"))
-        viewModel.addItem("Second item", listOf("work", "personal"))
+        viewModel.addItem("First item", listOf("work", "urgent"), listOf("0"))
+        viewModel.addItem("Second item", listOf("work", "personal"), emptyList())
 
         val currentContent = viewModel.uiState.value.currentNote.content
         assertTrue(currentContent.any { it.text == "First item" })
         assertTrue(currentContent.any { it.text == "Second item" })
+        assertEquals(listOf("0"), currentContent.find { it.text == "First item" }?.links)
 
         val tagCounts = NoteViewModel.calculateTagCounts(currentContent)
         assertEquals(2, tagCounts["work"])
@@ -36,13 +37,14 @@ class NoteViewModelTest {
 
     @Test
     fun testEditAndDeleteItem() {
-        viewModel.addItem("Initial Text", listOf("tag1"))
+        viewModel.addItem("Initial Text", listOf("tag1"), emptyList())
         val addedItem = viewModel.uiState.value.currentNote.content.last()
 
-        viewModel.editItem(addedItem.id, "Updated Text", listOf("tag1", "tag2"))
+        viewModel.editItem(addedItem.id, "Updated Text", listOf("tag1", "tag2"), listOf("1"))
         val editedItem = viewModel.uiState.value.currentNote.content.find { it.id == addedItem.id }
         assertEquals("Updated Text", editedItem?.text)
         assertEquals(listOf("tag1", "tag2"), editedItem?.tags)
+        assertEquals(listOf("1"), editedItem?.links)
 
         viewModel.deleteItem(addedItem.id)
         val deletedItem = viewModel.uiState.value.currentNote.content.find { it.id == addedItem.id }
@@ -51,7 +53,7 @@ class NoteViewModelTest {
 
     @Test
     fun testAddAndRemoveTagFromItem() {
-        viewModel.addItem("Sample item", listOf("tag1"))
+        viewModel.addItem("Sample item", listOf("tag1"), emptyList())
         val item = viewModel.uiState.value.currentNote.content.last()
 
         viewModel.addTagToItem(item.id, "tag2")
@@ -65,15 +67,14 @@ class NoteViewModelTest {
 
     @Test
     fun testMoveItemReordering() {
-        viewModel.updateNoteDetails("Test Note", "test.json")
+        viewModel.updateNoteDetails("Test Note")
         // Clear content and add 3 items
         val initialNote = NoteFile(
             name = "Test",
-            fileName = "test.json",
             content = listOf(
-                NoteItem(text = "Item 0"),
-                NoteItem(text = "Item 1"),
-                NoteItem(text = "Item 2")
+                NoteItem(id = "0", text = "Item 0"),
+                NoteItem(id = "1", text = "Item 1"),
+                NoteItem(id = "2", text = "Item 2")
             )
         )
         viewModel.loadFromJsonString(NoteRepository().encodeJsonString(initialNote))
@@ -88,9 +89,9 @@ class NoteViewModelTest {
     @Test
     fun testTagFilterMatchModeAllVsAny() {
         val items = listOf(
-            NoteItem(text = "Item A", tags = listOf("android", "kotlin")),
-            NoteItem(text = "Item B", tags = listOf("android", "java")),
-            NoteItem(text = "Item C", tags = listOf("kotlin", "swift"))
+            NoteItem(id = "0", text = "Item A", tags = listOf("android", "kotlin")),
+            NoteItem(id = "1", text = "Item B", tags = listOf("android", "java")),
+            NoteItem(id = "2", text = "Item C", tags = listOf("kotlin", "swift"))
         )
 
         val selectedTags = setOf("android", "kotlin")
@@ -108,9 +109,9 @@ class NoteViewModelTest {
     @Test
     fun testSearchQueryFiltering() {
         val items = listOf(
-            NoteItem(text = "Buy groceries", tags = listOf("home")),
-            NoteItem(text = "Write unit tests", tags = listOf("code")),
-            NoteItem(text = "Read book", tags = listOf("leisure"))
+            NoteItem(id = "0", text = "Buy groceries", tags = listOf("home")),
+            NoteItem(id = "1", text = "Write unit tests", tags = listOf("code")),
+            NoteItem(id = "2", text = "Read book", tags = listOf("leisure"))
         )
 
         val searchResults = NoteViewModel.filterItems(items, "unit", emptySet(), MatchMode.ALL)

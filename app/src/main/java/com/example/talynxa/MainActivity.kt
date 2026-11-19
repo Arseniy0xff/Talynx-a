@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     onCreateDocumentLauncher = {
-                        val initialName = uiState.currentNote.fileName.ifBlank { "note.json" }
+                        val initialName = "${uiState.currentNote.name.ifBlank { "note" }}.json"
                         createDocumentLauncher.launch(initialName)
                     }
                 )

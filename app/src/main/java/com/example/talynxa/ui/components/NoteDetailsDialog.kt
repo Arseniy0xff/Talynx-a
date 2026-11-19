@@ -20,16 +20,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun NoteDetailsDialog(
     initialTitle: String,
-    initialFileName: String,
     onDismiss: () -> Unit,
-    onSaveDetails: (name: String, fileName: String) -> Unit
+    onSaveDetails: (name: String) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
-    var fileName by remember { mutableStateOf(initialFileName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Note Info") },
+        title = { Text("Edit Note Title") },
         text = {
             Column {
                 OutlinedTextField(
@@ -39,23 +37,12 @@ fun NoteDetailsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    label = { Text("File Name (file_name)") },
-                    placeholder = { Text("notes.json") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSaveDetails(title, fileName)
+                    onSaveDetails(title)
                     onDismiss()
                 }
             ) {
@@ -76,10 +63,8 @@ private fun NoteDetailsDialogPreview() {
     com.example.talynxa.ui.theme.TalynxaTheme {
         NoteDetailsDialog(
             initialTitle = "My Note Title",
-            initialFileName = "my_file.json",
             onDismiss = {},
-            onSaveDetails = { _, _ -> }
+            onSaveDetails = { _ -> }
         )
     }
 }
-
