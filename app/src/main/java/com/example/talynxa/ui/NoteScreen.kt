@@ -253,6 +253,10 @@ fun NoteScreen(
             },
             onDeleteItem = {
                 viewModel.deleteItem(item.id)
+            },
+            allContent = uiState.currentNote.content,
+            onNavigateToItem = { targetItem ->
+                editingItem = targetItem
             }
         )
     }

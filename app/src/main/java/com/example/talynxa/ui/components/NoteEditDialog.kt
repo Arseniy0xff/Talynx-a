@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
@@ -31,6 +32,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -54,13 +56,16 @@ fun NoteEditDialog(
     item: NoteItem?, // null if creating a new item
     onDismiss: () -> Unit,
     onSaveItem: (text: String, tags: List<String>, links: List<String>) -> Unit,
-    onDeleteItem: (() -> Unit)? = null
+    onDeleteItem: (() -> Unit)? = null,
+    allContent: List<NoteItem> = emptyList(),
+    onNavigateToItem: ((NoteItem) -> Unit)? = null
 ) {
     var textInput by remember(item) { mutableStateOf(item?.text ?: "") }
     var tagsList by remember(item) { mutableStateOf(item?.tags ?: emptyList()) }
     var linksList by remember(item) { mutableStateOf(item?.links ?: emptyList()) }
     var newTagInput by remember { mutableStateOf("") }
     var newLinkInput by remember { mutableStateOf("") }
+    var showLinkExplorer by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -136,6 +141,19 @@ fun NoteEditDialog(
                         .padding(20.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
+                    // Links / Explore Links button if item exists and we have a navigator
+                    if (item != null && onNavigateToItem != null) {
+                        OutlinedButton(
+                            onClick = { showLinkExplorer = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Explore Links (${linksList.size} Outgoing)")
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     Text(
                         text = "Content",
                         style = MaterialTheme.typography.titleMedium,
@@ -338,5 +356,18 @@ fun NoteEditDialog(
                 }
             }
         }
+    }
+
+    if (showLinkExplorer && item != null && onNavigateToItem != null) {
+        LinkNavigationDialog(
+            currentItemId = item.id,
+            allContent = allContent,
+            onDismiss = { showLinkExplorer = false },
+            onSelectLinkedItem = { targetItem ->
+                // First save current item changes if any, then navigate to target item
+                onSaveItem(textInput, tagsList, linksList)
+                onNavigateToItem(targetItem)
+            }
+        )
     }
 }
