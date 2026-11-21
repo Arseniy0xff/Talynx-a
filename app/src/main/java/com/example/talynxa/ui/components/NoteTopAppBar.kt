@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 
 import androidx.compose.material3.Surface
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import com.example.talynxa.ui.theme.TalynxaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,34 +65,36 @@ fun NoteTopAppBar(
 
     TopAppBar(
         title = {
-            Column {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = if (noteTitle.isBlank()) "Untitled Note" else noteTitle,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     // Status indicator badge
                     Surface(
-                        color = if (isModified) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                        color = if (isModified) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
                         shape = CircleShape
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
                                     .clip(CircleShape)
-                                    .background(if (isModified) MaterialTheme.colorScheme.error else Color(0xFF4CAF50))
+                                    .background(if (isModified) MaterialTheme.colorScheme.error else Color(0xFF2E7D32))
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = if (isModified) "Unsaved" else if (hasUriAttached) "Saved" else "Local",
                                 style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
                                 color = if (isModified) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -195,7 +198,8 @@ fun NoteTopAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = modifier
     )

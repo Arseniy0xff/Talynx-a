@@ -50,9 +50,15 @@ fun NoteItemCard(
                 onLongClick = onClick
             ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp,
+            pressedElevation = 3.dp,
+            hoveredElevation = 2.dp
+        ),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
