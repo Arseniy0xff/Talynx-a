@@ -87,6 +87,31 @@ class NoteViewModelTest {
     }
 
     @Test
+    fun testMoveItemUpAndDown() {
+        val initialNote = NoteFile(
+            name = "Test",
+            content = listOf(
+                NoteItem(id = "0", text = "Item 0"),
+                NoteItem(id = "1", text = "Item 1"),
+                NoteItem(id = "2", text = "Item 2")
+            )
+        )
+        viewModel.loadFromJsonString(NoteRepository().encodeJsonString(initialNote))
+
+        viewModel.moveItemDown("0")
+        var content = viewModel.uiState.value.currentNote.content
+        assertEquals("Item 1", content[0].text)
+        assertEquals("Item 0", content[1].text)
+        assertEquals("Item 2", content[2].text)
+
+        viewModel.moveItemUp("2")
+        content = viewModel.uiState.value.currentNote.content
+        assertEquals("Item 1", content[0].text)
+        assertEquals("Item 2", content[1].text)
+        assertEquals("Item 0", content[2].text)
+    }
+
+    @Test
     fun testTagFilterMatchModeAllVsAny() {
         val items = listOf(
             NoteItem(id = "0", text = "Item A", tags = listOf("android", "kotlin")),

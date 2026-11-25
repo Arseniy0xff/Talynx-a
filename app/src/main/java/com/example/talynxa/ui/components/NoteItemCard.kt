@@ -1,8 +1,10 @@
 package com.example.talynxa.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,19 +17,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.talynxa.data.model.NoteItem
@@ -37,28 +40,48 @@ import com.example.talynxa.data.model.NoteItem
 fun NoteItemCard(
     item: NoteItem,
     onClick: () -> Unit,
-    onDeleteItem: (id: String) -> Unit,
     modifier: Modifier = Modifier,
-    dragHandle: @Composable (() -> Unit)? = null
+    isFirst: Boolean = false,
+    isLast: Boolean = false,
+    isDragging: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {}
 ) {
+    // Determine top and bottom shape to merge items into a cohesive container list (Expressive M3)
+    val shape = when {
+        isFirst && isLast -> RoundedCornerShape(20.dp)
+        isFirst -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
+        isLast -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+        else -> RoundedCornerShape(6.dp)
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onClick
-            ),
+            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .pointerInput(item.id) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onDragStart() },
+                    onDragEnd = { onDragEnd() },
+                    onDragCancel = { onDragCancel() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount)
+                    }
+                )
+            }
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp,
-            pressedElevation = 3.dp,
-            hoveredElevation = 2.dp
+            defaultElevation = if (isDragging) 8.dp else 0.5.dp,
+            pressedElevation = 2.dp
         ),
-        shape = RoundedCornerShape(20.dp)
+        shape = shape
     ) {
         Column(
             modifier = Modifier
@@ -70,7 +93,7 @@ fun NoteItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                // Item Text with height / line limit (max 3-4 lines with ellipsis)
+                // Item Text with height / line limit
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
@@ -96,27 +119,31 @@ fun NoteItemCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Direct delete button
-                    IconButton(
-                        onClick = { onDeleteItem(item.id) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete item",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // Drag handle if provided
-                    if (dragHandle != null) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        dragHandle()
-                    }
+                // Drag handle icon for reordering
+                Box(
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .pointerInput(item.id) {
+                            detectDragGestures(
+                                onDragStart = { onDragStart() },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragCancel() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDrag(dragAmount)
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Drag to reorder",
+                        tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
@@ -205,7 +232,8 @@ private fun NoteItemCardPreview() {
                 links = listOf("0")
             ),
             onClick = {},
-            onDeleteItem = {}
+            isFirst = true,
+            isLast = false
         )
     }
 }

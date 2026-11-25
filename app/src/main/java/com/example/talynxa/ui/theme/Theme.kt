@@ -70,15 +70,15 @@ fun TalynxaTheme(
             background = Color.Black,
             surface = Color.Black,
             surfaceDim = Color.Black,
-            surfaceBright = Color(0xFF121212),
+            surfaceBright = Color(0xFF1E1E1E),
             surfaceContainerLowest = Color.Black,
-            surfaceContainerLow = Color(0xFF0A0A0A),
-            surfaceContainer = Color(0xFF121212),
-            surfaceContainerHigh = Color(0xFF1A1A1A),
-            surfaceContainerHighest = Color(0xFF222222),
+            surfaceContainerLow = Color(0xFF161616),
+            surfaceContainer = Color(0xFF1E1E1E),
+            surfaceContainerHigh = Color(0xFF262626),
+            surfaceContainerHighest = Color(0xFF303030),
             onBackground = Color.White,
             onSurface = Color.White,
-            onSurfaceVariant = Color(0xFFCCCCCC)
+            onSurfaceVariant = Color(0xFFDDDDDD)
         )
     } else {
         baseColorScheme

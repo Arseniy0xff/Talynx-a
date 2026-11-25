@@ -17,11 +17,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import com.example.talynxa.ui.components.rememberReorderableLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SwipeRight
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -40,6 +47,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -185,7 +194,24 @@ fun NoteScreen(
                             }
                             val totalSize = fullNoteItems.size
 
+                            val lazyListState = rememberLazyListState()
+                            val reorderState = rememberReorderableLazyListState(
+                                lazyListState = lazyListState,
+                                onMove = { fromIndex, toIndex ->
+                                    if (fromIndex in listItems.indices && toIndex in listItems.indices) {
+                                        val fromItem = listItems[fromIndex]
+                                        val toItem = listItems[toIndex]
+                                        val fromFullIndex = fullNoteItems.indexOfFirst { it.id == fromItem.id }
+                                        val toFullIndex = fullNoteItems.indexOfFirst { it.id == toItem.id }
+                                        if (fromFullIndex != -1 && toFullIndex != -1) {
+                                            viewModel.moveItem(fromFullIndex, toFullIndex)
+                                        }
+                                    }
+                                }
+                            )
+
                             LazyColumn(
+                                state = lazyListState,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f),
@@ -198,38 +224,80 @@ fun NoteScreen(
                                     val fullIndex = indexMap[item.id] ?: 0
                                     val isFirst = fullIndex == 0
                                     val isLast = fullIndex == totalSize - 1
+                                    val isDragging = reorderState.draggingItemKey == item.id
 
-                                    NoteItemCard(
-                                        item = item,
-                                        onClick = { editingItem = item },
-                                        onDeleteItem = { id -> viewModel.deleteItem(id) },
-                                        dragHandle = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                IconButton(
-                                                    onClick = { viewModel.moveItemUp(item.id) },
-                                                    enabled = !isFirst,
-                                                    modifier = Modifier.size(32.dp)
+                                    val dismissState = rememberSwipeToDismissBoxState(
+                                        confirmValueChange = { dismissValue ->
+                                            if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                                viewModel.deleteItem(item.id)
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                    )
+
+                                    SwipeToDismissBox(
+                                        state = dismissState,
+                                        gesturesEnabled = !isDragging,
+                                        backgroundContent = {
+                                            val direction = dismissState.dismissDirection
+                                            val color = if (direction == SwipeToDismissBoxValue.StartToEnd || direction == SwipeToDismissBoxValue.EndToStart) {
+                                                MaterialTheme.colorScheme.errorContainer
+                                            } else {
+                                                Color.Transparent
+                                            }
+                                            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+
+                                            Surface(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                                                color = color,
+                                                shape = RoundedCornerShape(20.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 24.dp),
+                                                    contentAlignment = alignment
                                                 ) {
                                                     Icon(
-                                                        imageVector = Icons.Default.ArrowUpward,
-                                                        contentDescription = "Move Up",
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = { viewModel.moveItemDown(item.id) },
-                                                    enabled = !isLast,
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.ArrowDownward,
-                                                        contentDescription = "Move Down",
-                                                        modifier = Modifier.size(18.dp)
+                                                        imageVector = Icons.Default.Delete,
+                                                        contentDescription = "Delete",
+                                                        tint = MaterialTheme.colorScheme.onErrorContainer
                                                     )
                                                 }
                                             }
                                         }
-                                    )
+                                    ) {
+                                        val itemModifier = if (isDragging) {
+                                            Modifier
+                                                .zIndex(1f)
+                                                .graphicsLayer {
+                                                    translationY = reorderState.draggedDistance
+                                                    shadowElevation = 8.dp.toPx()
+                                                    scaleX = 1.03f
+                                                    scaleY = 1.03f
+                                                    alpha = 0.95f
+                                                }
+                                        } else {
+                                            Modifier
+                                        }
+
+                                        NoteItemCard(
+                                            item = item,
+                                            onClick = { editingItem = item },
+                                            modifier = itemModifier,
+                                            isFirst = isFirst,
+                                            isLast = isLast,
+                                            isDragging = isDragging,
+                                            onDragStart = { reorderState.onDragStart(item.id) },
+                                            onDragEnd = { reorderState.onDragEnd() },
+                                            onDragCancel = { reorderState.onDragCancel() },
+                                            onDrag = { dragAmount -> reorderState.onDrag(dragAmount) }
+                                        )
+                                    }
                                 }
                             }
                         }
